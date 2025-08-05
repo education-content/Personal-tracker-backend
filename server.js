@@ -2,8 +2,8 @@ require('dotenv').config(); // Load environment variables first
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const path = require('path');
 const db = require('./config/db');
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
@@ -12,7 +12,12 @@ app.use(cors());
 app.use(express.json());
 app.use(bodyParser.json());
 
+
+app.use("/auth", authRoutes);
+
 const PORT = 5001;
+
+
 
 db.getConnection()
   .then(conn => {
