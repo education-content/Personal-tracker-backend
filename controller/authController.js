@@ -47,7 +47,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    console.log("✅ User found:", user);
+    // console.log("✅ User found:", user);
 
     const hashedPassword =
       typeof user.password === "string"

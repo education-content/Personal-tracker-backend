@@ -4,6 +4,12 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const db = require('./config/db');
 const authRoutes = require("./routes/authRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
+const profileRoutes = require("./routes/profileRoutes");
+const bankRoutes = require("./routes/bankRoutes");
+
+
+
 
 const app = express();
 
@@ -14,9 +20,11 @@ app.use(bodyParser.json());
 
 
 app.use("/auth", authRoutes);
+app.use("/dashboard", dashboardRoutes);
+app.use("/profile", profileRoutes);
+app.use("/bank-details", bankRoutes); // Final route: /api/bank-details
 
 const PORT = 5001;
-
 
 
 db.getConnection()
