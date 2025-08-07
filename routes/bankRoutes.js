@@ -4,7 +4,7 @@ const {
   getBankDetails,
   saveBankDetails
 } = require("../controller/bankController");
-const { verifyToken } = require("../middleware/authMiddleware");
+const { verifyToken } = require("../middleware/authmiddleware");
 
 // GET bank details for the logged-in user
 router.get("/", verifyToken, getBankDetails);    // ✅ /bank-details

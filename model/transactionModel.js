@@ -36,13 +36,13 @@ const addSharedTransactionDetails = async (
     amount_owed,
     is_settled = false,
   },
-  client = db // allow passing db client if needed
+  connection
 ) => {
   if (!transaction_id || !user_id || amount_owed == null) {
     throw new Error("Missing required fields for shared transaction");
   }
 
-  await client.query(
+  await connection.query(
     `
     INSERT INTO shared_transaction_users 
       (transaction_id, user_id, amount_owed, is_settled)
@@ -53,6 +53,9 @@ const addSharedTransactionDetails = async (
 
   console.log("✅ Shared transaction detail added for user:", user_id);
 };
+
+
+
 
 // ✅ Get all transactions by user
 const getTransactionsByUser = async (userId, filters = {}) => {

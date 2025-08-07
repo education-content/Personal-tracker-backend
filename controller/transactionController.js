@@ -28,6 +28,21 @@ exports.createTransaction = async (req, res) => {
   try {
     await connection.beginTransaction();
 
+    if (!amount || isNaN(parseFloat(amount))) {
+      await connection.rollback();
+      return res.status(400).json({ error: "Invalid or missing amount." });
+    }
+
+    if (!type) {
+      await connection.rollback();
+      return res.status(400).json({ error: "Transaction type is required." });
+    }
+
+    if (!transaction_date) {
+      await connection.rollback();
+      return res.status(400).json({ error: "Transaction date is required." });
+    }
+
     const category_id = await getOrCreateCategory(userId, category_name, connection);
     const paidById = paid_by || userId;
 
@@ -48,68 +63,96 @@ exports.createTransaction = async (req, res) => {
       connection
     );
 
+    // 🔄 Normalize shared_with into array
+    let parsedSharedWith = [];
+
+    if (Array.isArray(shared_with)) {
+      parsedSharedWith = shared_with;
+    } else if (typeof shared_with === "string") {
+      parsedSharedWith = shared_with.includes(",")
+        ? shared_with.split(",").map((id) => id.trim())
+        : [shared_with];
+    }
+
+    console.log({
+      is_shared,
+      shared_with,
+      parsedSharedWith,
+      shared_amount,
+      shared_with_is_array: Array.isArray(shared_with),
+      parsedSharedWith_length: parsedSharedWith.length,
+      shared_amount_type: typeof shared_amount,
+    });
+
     if (
       is_shared &&
-      Array.isArray(shared_with) &&
-      shared_with.length > 0 &&
+      parsedSharedWith.length > 0 &&
       typeof shared_amount === "number"
     ) {
-      for (const user_id of shared_with) {
-        await addSharedTransactionDetails({
-          transaction_id: transaction.id,
-          user_id,
-          amount_owed: encrypt(shared_amount.toString()), // encrypting amount_owed
-          is_settled: is_settled ?? false,
+      const totalSharedAmount = parsedSharedWith.length * shared_amount;
+      const totalPaid = parseFloat(amount);
+
+      if (totalSharedAmount > totalPaid) {
+        await connection.rollback();
+        return res.status(400).json({
+          error: "Total shared amount cannot exceed the total amount paid.",
         });
+      }
+
+      console.log("✅ Inside Shared");
+      for (const user_id of parsedSharedWith) {
+        await addSharedTransactionDetails(
+          {
+            transaction_id: transaction.id,
+            user_id,
+            amount_owed: encrypt(shared_amount.toString()),
+            is_settled: is_settled ?? false,
+          },
+          connection
+        );
       }
     }
 
     if (type === "scholarship") {
-  const encryptedAmount = encrypt(amount.toString());
-
-  await db.query(
-    `INSERT INTO scholarships (user_id, name, amount, received_on, note, created_at)
-     VALUES (?, ?, ?, ?, ?, NOW())`,
-    [
-      userId,
-      description || "Scholarship", // scholarship name
-      encryptedAmount,
-      transaction_date,
-      description || "", // note
-    ]
-  );
-}
-
-
-
-    // 🔢 Convert encrypted amount back to number
-    // ✅ Ensure it's a number
-    // ✅ Step 1: Parse and validate amount
-    const amountValue = parseFloat(req.body.amount);
-    // const paidById = parseInt(paid_by || userId, 10);
-
-    if (isNaN(amountValue) || isNaN(paidById)) {
-      throw new Error("Invalid amount or user ID");
+      await connection.query(
+        `INSERT INTO scholarships (user_id, name, amount, received_on, note, created_at)
+         VALUES (?, ?, ?, ?, ?, NOW())`,
+        [
+          userId,
+          description || "Scholarship",
+          encryptedAmount,
+          transaction_date,
+          description || "",
+        ]
+      );
     }
 
-    // ✅ Step 2: Fetch and decrypt current balance
+    // ✅ Balance update
+    const amountValue = parseFloat(amount);
+
+    if (isNaN(amountValue) || isNaN(paidById)) {
+      await connection.rollback();
+      return res.status(400).json({ error: "Invalid amount or user ID" });
+    }
+
     const [userRows] = await connection.query(
       `SELECT initial_balance FROM users WHERE id = ?`,
       [paidById]
     );
 
     if (userRows.length === 0) {
-      throw new Error("User not found for balance update");
+      await connection.rollback();
+      return res.status(404).json({ error: "User not found for balance update" });
     }
 
     const currentEncryptedBalance = userRows[0].initial_balance;
     const currentBalance = parseFloat(decrypt(currentEncryptedBalance));
 
     if (isNaN(currentBalance)) {
-      throw new Error("Decrypted balance is invalid");
+      await connection.rollback();
+      return res.status(500).json({ error: "Decrypted balance is invalid" });
     }
 
-    // ✅ Step 3: Update balance in Node.js
     let updatedBalance;
 
     if (type === "credit") {
@@ -117,22 +160,18 @@ exports.createTransaction = async (req, res) => {
     } else if (type === "debit" || type === "shared") {
       updatedBalance = currentBalance - amountValue;
     } else if (type === "info") {
-      updatedBalance = currentBalance; // No change for info type
+      updatedBalance = currentBalance;
     } else {
-      throw new Error("Unknown transaction type");
+      await connection.rollback();
+      return res.status(400).json({ error: "Unknown transaction type" });
     }
 
-
-    // ✅ Step 4: Encrypt new balance
     const encryptedUpdatedBalance = encrypt(updatedBalance.toString());
 
-    // ✅ Step 5: Save it back to DB
     await connection.query(
       `UPDATE users SET initial_balance = ? WHERE id = ?`,
       [encryptedUpdatedBalance, paidById]
     );
-
-
 
     await connection.commit();
     res.status(201).json({ message: "Transaction created successfully" });
@@ -144,7 +183,6 @@ exports.createTransaction = async (req, res) => {
     connection.release();
   }
 };
-
 
 // ✅ Get transactions for a user (with decrypted fields)
 exports.getTransactions = async (req, res) => {

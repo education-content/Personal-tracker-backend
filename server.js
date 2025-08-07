@@ -10,8 +10,9 @@ const bankRoutes = require("./routes/bankRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const friendRoutes = require("./routes/friendRoute");
-
-
+const analyticsRoutes = require("./routes/analyticsRoutes")
+const sharedExpenseRoutes = require("./routes/sharedExpenseRoutes");
+const settlementRoutes = require("./routes/settlementRoutes");
 
 
 const app = express();
@@ -25,10 +26,13 @@ app.use(bodyParser.json());
 app.use("/auth", authRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/profile", profileRoutes);
-app.use("/bank-details", bankRoutes); // Final route: /api/bank-details
+app.use("/bank-details", bankRoutes);
 app.use("/categories", categoryRoutes);
 app.use("/transactions", transactionRoutes);
 app.use("/friends", friendRoutes);
+app.use("/analytics",analyticsRoutes);
+app.use("/shared-expenses", sharedExpenseRoutes);
+app.use("/settlements", settlementRoutes);
 
 const PORT = 5001;
 
