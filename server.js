@@ -7,6 +7,9 @@ const authRoutes = require("./routes/authRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const bankRoutes = require("./routes/bankRoutes");
+const categoryRoutes = require("./routes/categoryRoutes");
+const transactionRoutes = require("./routes/transactionRoutes");
+const friendRoutes = require("./routes/friendRoute");
 
 
 
@@ -23,6 +26,9 @@ app.use("/auth", authRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/profile", profileRoutes);
 app.use("/bank-details", bankRoutes); // Final route: /api/bank-details
+app.use("/categories", categoryRoutes);
+app.use("/transactions", transactionRoutes);
+app.use("/friends", friendRoutes);
 
 const PORT = 5001;
 

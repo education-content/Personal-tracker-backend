@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const dashboardController = require("../controller/dashboardController");
-const { verifyToken } = require("../middleware/authMiddleware"); // ✅ fix here
+const { verifyToken } = require("../middleware/authmiddleware"); // ✅ fix here
 
 router.get("/summary", verifyToken, dashboardController.getSummary);
 router.get("/stats/monthly", verifyToken, dashboardController.getMonthlyStats);
