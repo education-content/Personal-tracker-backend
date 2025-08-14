@@ -12,17 +12,25 @@ exports.sendRequest = async (req, res) => {
   }
 
   try {
-    // 🔍 Find user by email
-    const [users] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
+    // 🔍 Find user by email and fetch bank_name and initial_balance too
+    const [users] = await db.query(
+      "SELECT id, bank_name, initial_balance FROM users WHERE email = ?",
+      [email]
+    );
 
     if (users.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const receiver_id = users[0].id;
+    const { id: receiver_id, bank_name, initial_balance } = users[0];
 
     if (senderId === receiver_id) {
       return res.status(400).json({ error: "Cannot send request to yourself" });
+    }
+
+    // ✅ Check if bank_name and initial_balance are set
+    if (!bank_name || bank_name.trim() === "" || initial_balance === null) {
+      return res.status(400).json({ error: "User must have bank name and initial balance set" });
     }
 
     const existing = await friendModel.checkExistingRequest(senderId, receiver_id);
@@ -37,6 +45,7 @@ exports.sendRequest = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
     
 
 // GET /friends/requests
